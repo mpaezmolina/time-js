@@ -1,3 +1,4 @@
+import { decodeJWT } from "../utils/decodeJWT"
 
 //----  LINES
 
@@ -7,6 +8,7 @@ export async function getLines(access_token) {
   			lines {
 				id
     			name
+				operator_id
   			}
 		}
 	`;
@@ -16,9 +18,12 @@ export async function getLines(access_token) {
 }
 
 export async function removeLine(id, access_token) {
+	console.log("LINE ID: " + id);
 	const query = `
 		mutation {
-			delete_lines_by_pk(id: ${id})
+			delete_lines_by_pk(id: ${id}) {
+				id
+			}
 		}
 	`;
 
@@ -27,9 +32,12 @@ export async function removeLine(id, access_token) {
 }
 
 export async function saveLine(name, access_token) {
+	const decodedToken = decodeJWT(access_token);
+    const userId = decodedToken.payload['https://hasura.io/jwt/claims']['x-hasura-user-id'];
+
 	const query = `
 		mutation {
-			insert_lines(objects: {name: "${name}"}) {
+			insert_lines(objects: {name: "${name}", operator_id: "${userId}"}) {
 				returning {
 					id
 				}
@@ -45,7 +53,7 @@ export async function saveLine(name, access_token) {
 
 async function fetchHasura(query, access_token) {
 	try {
-		const response = await fetch(process.env.HASURA_ENDPOINT, {
+		const response = await fetch("https://time.hasura.app/v1/graphql", {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
